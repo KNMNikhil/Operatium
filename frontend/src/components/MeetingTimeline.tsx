@@ -63,8 +63,8 @@ export function MeetingTimeline() {
             )}
         </div>
         {currentSpeaker && (
-          <div className="self-end px-2 py-1 rounded border-2 border-black text-lg font-bold text-black bg-[#FFF4E9] transform rotate-[-2deg] z-10 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-            {currentSpeaker} Speaking
+          <div className="self-end px-2 py-1 rounded border-2 border-black text-lg font-bold text-black bg-[#FFF4E9] transform rotate-[-2deg] z-10 whitespace-nowrap overflow-hidden text-ellipsis max-w-full flex items-center">
+            {currentSpeaker} Speaking<span className="animate-pulse ml-1 tracking-widest">...</span>
           </div>
         )}
       </div>
