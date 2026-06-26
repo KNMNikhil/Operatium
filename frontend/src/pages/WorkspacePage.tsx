@@ -58,6 +58,28 @@ export function WorkspacePage() {
     }
   };
 
+  const handleViewReport = async (id: string) => {
+    setLoading(true);
+    try {
+      const fullStartup = await api.getStartup(id);
+      if (fullStartup.reports && fullStartup.reports.length > 0) {
+        useStartupStore.getState().setStartups(startups); // preserve if needed
+        import('../store/useMeetingStore').then(({ useMeetingStore }) => {
+          useMeetingStore.getState().setIdea(fullStartup.name, fullStartup.description);
+          useMeetingStore.getState().setReport(fullStartup.reports[0] as any);
+          useMeetingStore.getState().setMeetingDecisions(fullStartup.decisions || []);
+          navigate('/report');
+        });
+      } else {
+        alert("This startup has no reports yet. You need to launch a meeting and generate one.");
+      }
+    } catch (err: any) {
+      alert(`Failed to load report: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{
       width: '100vw', minHeight: '100vh',
@@ -205,6 +227,23 @@ export function WorkspacePage() {
                 <span>🏭 {startup.industry}</span>
                 <span>📅 {startup.meeting_count} meeting{startup.meeting_count !== 1 ? 's' : ''}</span>
                 <span>👥 {startup.executives?.length || 7} execs</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleOpenStartup(startup.id); }}
+                  style={{ flex: 1, padding: '10px', background: '#000', color: '#FFF4E9', borderRadius: 8, fontFamily: "'Caveat'", fontSize: 20, cursor: 'pointer' }}
+                >
+                  Enter Boardroom
+                </button>
+                {startup.validation_score > 0 && (
+                  <button
+                     onClick={(e) => { e.stopPropagation(); handleViewReport(startup.id); }}
+                     style={{ flex: 1, padding: '10px', background: '#FFF4E9', border: '2px solid #000', borderRadius: 8, fontFamily: "'Caveat'", fontSize: 20, cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    View Report
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

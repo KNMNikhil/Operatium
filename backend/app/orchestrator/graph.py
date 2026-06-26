@@ -81,6 +81,7 @@ def make_analysis_node(on_stream: StreamCallback, supabase):
                 startup_description=state["startup_description"],
                 industry=state["industry"],
                 startup_id=state["startup_id"],
+                meeting_type=state.get("meeting_type", "full_board"),
             ):
                 full_text += token
                 await on_stream(STAGE_ANALYSIS, role, token)
@@ -137,6 +138,7 @@ def make_debate_node(on_stream: StreamCallback, supabase):
                 all_analyses=analyses,
                 own_analysis=analyses.get(role, ""),
                 startup_id=state["startup_id"],
+                meeting_type=state.get("meeting_type", "full_board"),
             ):
                 full_text += token
                 await on_stream(STAGE_DEBATE, role, token)
@@ -510,6 +512,7 @@ async def run_followup(
     executives: list[str],
     meeting_history: str,
     on_stream: StreamCallback,
+    meeting_type: str = "full_board",
 ) -> None:
     """Run a follow-up question through all selected executives.
     Retrieves startup-specific RAG context for each executive's response.
@@ -520,8 +523,33 @@ async def run_followup(
 
     await on_stream("followup", "", "__stage_change__")
 
-    # Limit discussion to max 2 non-CEO executives for speed
-    discussion_roles = [r for r in executives if r != "CEO"][:2]
+    # Smart Routing: Ask LLM which executives should answer
+    from langchain_core.messages import HumanMessage
+    router_prompt = f"""Analyze this question from the founder: "{question}"
+Which two of these executives are best suited to provide specialized insights before the CEO gives the final answer?
+Available Executives: {', '.join([r for r in executives if r != 'CEO'])}
+Return ONLY their exact titles separated by a comma (e.g., "CTO, Finance & Operations"). If the question explicitly asks for the CEO or is purely general, you can just return nothing."""
+    
+    routing_response = ""
+    if "CEO" in exec_map:
+        try:
+            resp = await exec_map["CEO"].llm.ainvoke([HumanMessage(content=router_prompt)])
+            routing_response = resp.content
+        except Exception:
+            routing_response = ""
+
+    discussion_roles = []
+    for r in executives:
+        if r != "CEO" and r in routing_response:
+            discussion_roles.append(r)
+    
+    # Fallback if routing fails or returns empty
+    if not discussion_roles:
+        discussion_roles = [r for r in executives if r != "CEO"][:2]
+    else:
+        # cap at 2 max
+        discussion_roles = discussion_roles[:2]
+
     recent_discussion_text = ""
 
     for role in discussion_roles:
@@ -534,6 +562,7 @@ async def run_followup(
             question=question,
             meeting_history=meeting_history,
             startup_id=startup_id,
+            meeting_type=meeting_type,
         ):
             full_text += token
             await on_stream("followup", role, token)
@@ -566,6 +595,7 @@ Your executive team just provided these brief thoughts:
 
 Provide the final, highly structured, comprehensive, and innovative answer to the founder. 
 If the founder asks for specific estimates (like timelines, team size, budget, or metrics), YOU MUST PROVIDE EXPLICIT LOGICAL ESTIMATES (e.g., "3-6 months", "2 engineers", "$50k-$100k") based on industry standards for {startup_name}. DO NOT give vague answers like "it depends" without providing a concrete baseline.
+If the founder specifies a currency (e.g., INR, USD, AUD), YOU MUST accurately calculate and format all financial estimates in that exact currency.
 Use Markdown formatting extensively (bolding, bullet points, numbered lists, tables, etc.) to make the answer visually appealing and easy to digest.
 Start your answer EXACTLY with: "Thanks folks."
 Be clear, direct, and use the exact startup name "{startup_name}"."""

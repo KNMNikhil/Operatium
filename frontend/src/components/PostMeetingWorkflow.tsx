@@ -86,6 +86,33 @@ ${Object.entries(analysis).map(([role, text]) => `### ${role}\n${stripMd(text as
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPDF = async () => {
+    // @ts-ignore
+    const html2pdf = (await import('html2pdf.js')).default;
+    const element = document.getElementById('report-content');
+    const opt = {
+      margin:       0.5,
+      filename:     `${ideaTitle.replace(/\s+/g, '_')}_Report.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+  };
+
+  const handlePivot = async () => {
+    if (!report?.meeting_id) return;
+    try {
+      const { api } = await import('../services/api');
+      const res = await api.pivotMeeting(report.meeting_id);
+      if (res.startup_id) {
+        window.location.href = `/?startup_id=${res.startup_id}&execs=CEO,CTO,Product Manager,Product Designer,Growth & Marketing,Finance & Operations,Investor & Risk Advisor&startup_name=${encodeURIComponent(res.name)}&description=${encodeURIComponent(res.description)}`;
+      }
+    } catch (e: any) {
+      alert(`Failed to pivot: ${e.message}`);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -98,7 +125,7 @@ ${Object.entries(analysis).map(([role, text]) => `### ${role}\n${stripMd(text as
         backgroundSize: '40px 40px',
       }}
     >
-      <div className="max-w-6xl mx-auto space-y-12 pb-24 relative">
+      <div id="report-content" className="max-w-6xl mx-auto space-y-12 pb-24 relative">
         <button 
           onClick={() => {
             resetMeeting();
@@ -242,7 +269,13 @@ ${Object.entries(analysis).map(([role, text]) => `### ${role}\n${stripMd(text as
               onClick={handleDownload}
               className="p-6 border-2 border-black rounded-lg bg-blue-600 text-white text-2xl font-bold shadow-[4px_4px_0_rgba(0,0,0,0.4)] transform hover:translate-y-1 hover:shadow-[2px_2px_0_rgba(0,0,0,0.4)] transition-all"
             >
-              📥 Download Report
+              📥 Download Report (MD)
+            </button>
+            <button 
+              onClick={handleDownloadPDF}
+              className="p-6 border-2 border-black rounded-lg bg-red-600 text-white text-2xl font-bold shadow-[4px_4px_0_rgba(0,0,0,0.4)] transform hover:translate-y-1 hover:shadow-[2px_2px_0_rgba(0,0,0,0.4)] transition-all"
+            >
+              📄 Download PDF
             </button>
             <button 
               onClick={onContinueDiscussion}
@@ -259,6 +292,15 @@ ${Object.entries(analysis).map(([role, text]) => `### ${role}\n${stripMd(text as
             >
               💾 Save And Exit
             </button>
+
+            {validationScore < 40 && (
+              <button 
+                onClick={handlePivot}
+                className="col-span-full mt-4 p-6 border-4 border-red-500 rounded-lg bg-red-100 text-red-700 text-3xl font-bold shadow-[0_0_20px_rgba(239,68,68,0.5)] transform hover:scale-105 transition-all animate-pulse"
+              >
+                🔀 Pivot Idea Automatically
+              </button>
+            )}
 
             {/* Placeholder Buttons for Future Features */}
             <button className="p-6 border-2 border-black/30 rounded-lg bg-gray-100 text-black/50 text-xl font-bold border-dashed cursor-not-allowed">

@@ -22,6 +22,7 @@ class MeetingState(TypedDict):
     concept: str            # alias for startup_description used in decision prompt
     industry: str
     executives: list[str]
+    meeting_type: str
 
     # Built up during the meeting
     analyses: dict[str, str]          # role → full analysis text

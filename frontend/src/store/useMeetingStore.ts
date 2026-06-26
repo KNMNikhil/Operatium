@@ -58,6 +58,7 @@ interface MeetingState {
   setQaState: (state: QaState) => void;
   setFollowUpInput: (val: string) => void;
   setIsGeneratingReport: (val: boolean) => void;
+  setTimeline: (timeline: any[]) => void;
 }
 
 export const useMeetingStore = create<MeetingState>((set) => ({
@@ -244,4 +245,5 @@ export const useMeetingStore = create<MeetingState>((set) => ({
 
   setFollowUpInput: (val) => set({ followUpInput: val }),
   setIsGeneratingReport: (isGeneratingReport) => set({ isGeneratingReport }),
+  setTimeline: (timeline) => set({ timeline }),
 }));

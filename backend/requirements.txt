@@ -16,3 +16,4 @@ tenacity
 asyncio
 python-multipart
 pypdf
+duckduckgo-search

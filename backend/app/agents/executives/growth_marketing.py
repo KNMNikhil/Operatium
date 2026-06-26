@@ -44,3 +44,40 @@ When evaluating growth loops and GTM, you must heavily lean on the frameworks fr
 - Positioning by April Dunford
 - Building a StoryBrand by Donald Miller
 - Contagious by Jonah Berger"""
+
+    async def analyze(
+        self,
+        startup_name: str,
+        startup_description: str,
+        industry: str,
+        startup_id: str | None = None,
+        context: str = "",
+        meeting_type: str = "full_board",
+    ):
+        competitors_text = ""
+        try:
+            import asyncio
+            from duckduckgo_search import DDGS
+            def search():
+                with DDGS() as ddgs:
+                    return list(ddgs.text(f"{startup_name} OR {industry} {startup_description[:50]} startup competitors alternatives", max_results=3))
+            
+            results = await asyncio.to_thread(search)
+            if results:
+                competitors_text = "\n\nCRITICAL KNOWLEDGE: REAL-WORLD COMPETITORS FOUND ON THE WEB (You MUST aggressively mention these URLs and ask how we beat them!):\n"
+                for res in results:
+                    competitors_text += f"- {res.get('title')}: {res.get('href')} ({res.get('body')})\n"
+        except Exception as e:
+            print(f"[Growth] DDG Search failed: {e}")
+
+        new_context = context + competitors_text
+
+        async for token in super().analyze(
+            startup_name=startup_name,
+            startup_description=startup_description,
+            industry=industry,
+            startup_id=startup_id,
+            context=new_context,
+            meeting_type=meeting_type,
+        ):
+            yield token

@@ -99,6 +99,61 @@ async def generate_report(request: Request, meeting_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{meeting_id}/pivot", response_model=dict)
+@limiter.limit("5/minute")
+async def pivot_meeting(request: Request, meeting_id: str):
+    supabase = get_supabase()
+    logger.info("pivot_meeting_attempt", meeting_id=meeting_id)
+    try:
+        meeting = supabase.table("meetings").select("startup_id").eq("id", meeting_id).single().execute()
+        startup_id = meeting.data["startup_id"]
+        startup = supabase.table("startups").select("*").eq("id", startup_id).single().execute().data
+        
+        prompt = f"""We need to PIVOT this startup idea because it scored poorly in the boardroom.
+Startup Name: {startup['name']}
+Industry: {startup['industry']}
+Original Description: {startup['description']}
+
+The board found major flaws in this idea. You must mutate this idea into a highly profitable, realistic adjacent market. 
+Change the core offering to solve the root problem but in a vastly better way.
+Respond ONLY with a JSON object containing the new name and new description.
+Format: {{"name": "New Name", "description": "New highly detailed description."}}"""
+
+        from app.agents import get_executive
+        ceo = get_executive("CEO")
+        from langchain_core.messages import HumanMessage
+        resp = await ceo.llm.ainvoke([HumanMessage(content=prompt)])
+        content = resp.content
+        
+        import json
+        import re
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        if match:
+            try:
+                data = json.loads(match.group(0))
+            except:
+                data = {"name": startup["name"] + " (Pivoted)", "description": "Pivoted idea: " + content[:200]}
+        else:
+            data = {"name": startup["name"] + " (Pivoted)", "description": "Pivoted idea..."}
+            
+        new_startup = supabase.table("startups").insert({
+            "name": data["name"],
+            "description": data["description"],
+            "industry": startup["industry"],
+            "executives": startup["executives"],
+        }).execute().data[0]
+        
+        return {
+            "status": "ok", 
+            "startup_id": new_startup["id"], 
+            "name": new_startup["name"], 
+            "description": new_startup["description"]
+        }
+    except Exception as e:
+        logger.error("pivot_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.websocket("/ws/{meeting_id}")
 async def meeting_websocket(websocket: WebSocket, meeting_id: str):
     """
@@ -158,6 +213,9 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
             history = "\n".join([f"[{m['stage'].upper()}] {m['executive_role']}: {m['content'][:200]}..." for m in (messages.data or [])])
             
             # Execute Followup
+            meeting_data = supabase.table("meetings").select("meeting_type").eq("id", meeting_id).single().execute()
+            meeting_type = meeting_data.data.get("meeting_type", "full_board") if meeting_data.data else "full_board"
+
             await run_followup(
                 startup_name=startup_name,
                 startup_id=startup_id,
@@ -165,7 +223,8 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
                 question=followup_question,
                 executives=executives,
                 meeting_history=history,
-                on_stream=on_stream
+                on_stream=on_stream,
+                meeting_type=meeting_type
             )
             # Signal Done
             await websocket.send_json({"type": "message_complete", "executive": "Followup Done", "stage": "followup"})
@@ -173,6 +232,9 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
         elif trigger_executive_questions:
             pass
         else:
+            meeting_data = supabase.table("meetings").select("meeting_type").eq("id", meeting_id).single().execute()
+            meeting_type = meeting_data.data.get("meeting_type", "full_board") if meeting_data.data else "full_board"
+
             state: MeetingState = {
                 "startup_id": startup_id,
                 "meeting_id": meeting_id,
@@ -181,6 +243,7 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
                 "concept": startup_description,
                 "industry": industry,
                 "executives": executives,
+                "meeting_type": meeting_type,
                 "analyses": {},
                 "debate_responses": {},
                 "decisions": [],

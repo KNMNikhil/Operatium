@@ -7,8 +7,15 @@ export function CommandInput({ onSubmit, onGenerateReport }: { onSubmit: (text: 
   const { addTimelineEvent, qaState } = useMeetingStore();
   const [isLoading, setIsLoading] = useState(false);
 
+  const [warning, setWarning] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (qaState !== 'asking_questions') {
+      setWarning('The meeting is in process. Please maintain silence and ask no questions now.');
+      setTimeout(() => setWarning(''), 3500);
+      return;
+    }
     if (!input.trim() || isLoading) return;
     
     const userIdea = input;
@@ -27,6 +34,11 @@ export function CommandInput({ onSubmit, onGenerateReport }: { onSubmit: (text: 
 
   return (
     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 pointer-events-auto flex items-center justify-center">
+      {warning && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 bg-[#c0392b] text-white border-2 border-black font-bold py-3 px-6 rounded-lg shadow-[4px_4px_0_rgba(0,0,0,1)] z-[100] text-xl font-['Caveat'] tracking-wider">
+          {warning}
+        </div>
+      )}
       <div className="flex-1 flex flex-col items-end">
         <form onSubmit={handleSubmit} className="w-full bg-[#FFF4E9] border-2 border-black rounded-lg p-2 flex items-center gap-3 transition-all focus-within:border-black/70 rotate-[-1deg] shadow-[4px_4px_0_rgba(0,0,0,1)]">
           <div className="w-8 h-8 rounded-full border-2 border-black flex items-center justify-center flex-shrink-0 bg-[#FFF4E9]">

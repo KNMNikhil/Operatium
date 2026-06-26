@@ -106,6 +106,9 @@ export const api = {
   createFollowup: (meetingId: string, payload: { question: string }) =>
     apiFetch<{ status: string, meeting_id: string }>(`/api/meetings/${meetingId}/followup`, { method: 'POST', body: JSON.stringify(payload) }),
 
+  pivotMeeting: (meeting_id: string) =>
+    apiFetch<{ status: string, startup_id: string, name: string, description: string }>(`/api/meetings/${meeting_id}/pivot`, { method: 'POST' }),
+
   // Health
   health: () =>
     apiFetch<{ status: string }>('/health'),

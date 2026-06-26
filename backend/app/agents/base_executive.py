@@ -41,7 +41,7 @@ class BaseExecutive(ABC):
     """
 
     role: str = ""
-    model_name: str = "qwen3.5"
+    model_name: str = "qwen2.5:1.5b"
     rag_tags: list[str] = []   # overridden per executive for role-specific retrieval
 
     def __init__(self):
@@ -122,6 +122,7 @@ class BaseExecutive(ABC):
         industry: str,
         startup_id: str | None = None,
         context: str = "",
+        meeting_type: str = "full_board",
     ) -> AsyncGenerator[str, None]:
         """Initial analysis of the startup idea — streams tokens.
 
@@ -157,8 +158,18 @@ Where you reference a framework or past precedent, briefly name it.
 Keep your response extremely brief and fast to generate — strictly under 15 words. Form a complete sentence. You MUST refer to the startup as "{startup_name}".
 End with 1 specific question for your colleagues if you have them, still keeping the total response under 15 words."""
 
+        shark_tank_rule = (
+            "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
+            "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
+            "Abandon your polite persona and do not be nice."
+        ) if meeting_type == "shark_tank" else ""
+
+        sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
+        if shark_tank_rule:
+            sys_content += "\n\n" + shark_tank_rule
+
         messages = [
-            SystemMessage(content=self.system_prompt + "\n\n" + RAG_SYSTEM_RULES),
+            SystemMessage(content=sys_content),
             HumanMessage(content=prompt),
         ]
 
@@ -174,6 +185,7 @@ End with 1 specific question for your colleagues if you have them, still keeping
         all_analyses: dict[str, str],
         own_analysis: str,
         startup_id: str | None = None,
+        meeting_type: str = "full_board",
     ) -> AsyncGenerator[str, None]:
         """Debate stage — challenge or build on colleagues' analyses.
 
@@ -216,8 +228,18 @@ Now respond to your colleagues. You may:
 
 Be direct and specific. Reference colleagues by role. Keep your response extremely brief and fast to generate — strictly under 15 words. Form a complete sentence and you MUST use the exact startup name "{startup_name}" if referring to the company."""
 
+        shark_tank_rule = (
+            "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
+            "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
+            "Abandon your polite persona and do not be nice."
+        ) if meeting_type == "shark_tank" else ""
+
+        sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
+        if shark_tank_rule:
+            sys_content += "\n\n" + shark_tank_rule
+
         messages = [
-            SystemMessage(content=self.system_prompt + "\n\n" + RAG_SYSTEM_RULES),
+            SystemMessage(content=sys_content),
             HumanMessage(content=prompt),
         ]
 
@@ -233,6 +255,7 @@ Be direct and specific. Reference colleagues by role. Keep your response extreme
         question: str,
         meeting_history: str,
         startup_id: str | None = None,
+        meeting_type: str = "full_board",
     ) -> AsyncGenerator[str, None]:
         """Respond to a user follow-up question.
 
@@ -264,8 +287,18 @@ Respond from your specific role. Reference past decisions and relevant framework
 If the user is answering a previous question, acknowledge it intelligently. If the user is asking a question, provide a very brief internal thought for the team to consider before the CEO gives the final answer. 
 CRITICAL: Keep your response extremely brief, strictly under 15 words. Form a complete sentence and use the exact startup name "{startup_name}"."""
 
+        shark_tank_rule = (
+            "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
+            "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
+            "Abandon your polite persona and do not be nice."
+        ) if meeting_type == "shark_tank" else ""
+
+        sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
+        if shark_tank_rule:
+            sys_content += "\n\n" + shark_tank_rule
+
         messages = [
-            SystemMessage(content=self.system_prompt + "\n\n" + RAG_SYSTEM_RULES),
+            SystemMessage(content=sys_content),
             HumanMessage(content=prompt),
         ]
 
@@ -280,6 +313,7 @@ CRITICAL: Keep your response extremely brief, strictly under 15 words. Form a co
         startup_name: str,
         meeting_history: str,
         startup_id: str | None = None,
+        meeting_type: str = "full_board",
     ) -> AsyncGenerator[str, None]:
         """Ask the founder a deep question based on the meeting context."""
         from langchain_core.messages import SystemMessage, HumanMessage

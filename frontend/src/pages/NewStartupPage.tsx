@@ -47,20 +47,13 @@ export function NewStartupPage() {
     );
   };
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!name.trim() || !description.trim() || !industryPrimary || !industrySecondary) {
-        setError('Please fill in all required fields (Name, Description, Primary, and Secondary Industry).');
-        return;
-      }
-      setError('');
-      setStep(2);
-    } else if (step === 2) {
-      if (meetingType === 'full_board') {
-        setSelectedExecs(ALL_EXECUTIVES.map(e => e.id));
-      }
-      setStep(3);
+  const handleNext = async () => {
+    if (!name.trim() || !description.trim() || !industryPrimary || !industrySecondary) {
+      setError('Please fill in all required fields (Name, Description, Primary, and Secondary Industry).');
+      return;
     }
+    setError('');
+    await handleLaunch();
   };
 
   const handleLaunch = async () => {
@@ -125,21 +118,7 @@ export function NewStartupPage() {
         ← Back
       </button>
 
-      {/* Step indicators */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
-        {[1, 2, 3].map(s => (
-          <div key={s} style={{
-            width: 36, height: 36, borderRadius: '50%',
-            border: '2px solid #000',
-            background: step >= s ? '#000' : 'transparent',
-            color: step >= s ? '#FFF4E9' : '#000',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, fontWeight: 700,
-            boxShadow: step === s ? '3px 3px 0 rgba(0,0,0,0.3)' : 'none',
-            transition: 'all 0.3s',
-          }}>{s}</div>
-        ))}
-      </div>
+
 
       <AnimatePresence mode="wait">
         {step === 1 && (
@@ -228,121 +207,51 @@ export function NewStartupPage() {
               </div>
             </div>
 
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <div style={{ position: 'relative', width: 50, height: 28 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={meetingType === 'shark_tank'} 
+                    onChange={e => setMeetingType(e.target.checked ? 'shark_tank' : 'full_board')} 
+                    style={{ opacity: 0, width: 0, height: 0 }} 
+                  />
+                  <span style={{
+                    position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: meetingType === 'shark_tank' ? '#ef4444' : 'rgba(0,0,0,0.2)',
+                    transition: '.4s', borderRadius: 34,
+                    border: '2px solid #000',
+                  }}>
+                    <span style={{
+                      position: 'absolute', height: 20, width: 20, left: 2, bottom: 2,
+                      backgroundColor: 'white', transition: '.4s', borderRadius: '50%',
+                      transform: meetingType === 'shark_tank' ? 'translateX(22px)' : 'translateX(0)',
+                      border: '2px solid #000'
+                    }} />
+                  </span>
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: meetingType === 'shark_tank' ? '#ef4444' : '#000' }}>
+                    🦈 Shark Tank Mode
+                  </div>
+                  <div style={{ fontSize: 16, color: 'rgba(0,0,0,0.6)' }}>
+                    Warning: Executives will be extremely hostile, skeptical, and demanding.
+                  </div>
+                </div>
+              </label>
+            </div>
+
             {error && <p style={{ color: '#c0392b', fontSize: 18, marginBottom: 12 }}>{error}</p>}
 
-            <button onClick={handleNext} style={{
+            <button onClick={handleNext} disabled={isLoading} style={{
               width: '100%', padding: '14px', background: '#000', color: '#FFF4E9',
               border: '2px solid #000', borderRadius: 8, fontSize: 22, fontWeight: 700,
-              fontFamily: "'Caveat', cursive", cursor: 'pointer',
+              fontFamily: "'Caveat', cursive", cursor: isLoading ? 'wait' : 'pointer',
               boxShadow: '4px 4px 0 rgba(0,0,0,0.3)', transition: 'transform 0.1s',
+              opacity: isLoading ? 0.7 : 1,
             }}>
-              Next: Choose Meeting Type →
+              {isLoading ? 'Calling the board...' : 'Launch Meeting →'}
             </button>
-          </motion.div>
-        )}
-
-        {step === 2 && (
-          <motion.div key="step2"
-            initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -60 }}
-            transition={{ duration: 0.35 }}
-            style={{
-              background: '#FFF4E9', border: '2px solid #000', borderRadius: 16,
-              padding: '48px 56px', width: 560, boxShadow: '6px 6px 0 #000',
-              transform: 'rotate(0.5deg)', maxHeight: '85vh', overflowY: 'auto',
-            }}
-          >
-            <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 8 }}>Meeting Type</h1>
-            <p style={{ fontSize: 20, color: 'rgba(0,0,0,0.6)', marginBottom: 32 }}>Who should attend the boardroom?</p>
-
-            {[
-              { id: 'full_board', label: 'Full Executive Board', desc: 'All 7 executives analyze your idea — the complete boardroom experience.' },
-              { id: 'custom', label: 'Custom Board', desc: 'Select which executives to include. Great for focused reviews.' },
-            ].map(opt => (
-              <button key={opt.id} onClick={() => setMeetingType(opt.id as any)} style={{
-                width: '100%', padding: '20px 24px', marginBottom: 16,
-                border: `2px solid #000`, borderRadius: 12,
-                background: meetingType === opt.id ? '#000' : 'transparent',
-                color: meetingType === opt.id ? '#FFF4E9' : '#000',
-                textAlign: 'left', cursor: 'pointer',
-                boxShadow: meetingType === opt.id ? '4px 4px 0 rgba(0,0,0,0.3)' : '2px 2px 0 rgba(0,0,0,0.1)',
-                transition: 'all 0.2s', fontFamily: "'Caveat', cursive",
-              }}>
-                <div style={{ fontSize: 24, marginBottom: 4 }}><strong style={{ fontSize: 22 }}>{opt.label}</strong></div>
-                <div style={{ fontSize: 18, opacity: 0.8 }}>{opt.desc}</div>
-              </button>
-            ))}
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-              <button onClick={() => setStep(1)} style={{
-                flex: 1, padding: '14px', background: 'transparent', color: '#000',
-                border: '2px solid #000', borderRadius: 8, fontSize: 20, fontWeight: 600,
-                fontFamily: "'Caveat', cursive", cursor: 'pointer',
-              }}>← Back</button>
-              <button onClick={handleNext} style={{
-                flex: 2, padding: '14px', background: '#000', color: '#FFF4E9',
-                border: '2px solid #000', borderRadius: 8, fontSize: 22, fontWeight: 700,
-                fontFamily: "'Caveat', cursive", cursor: 'pointer',
-                boxShadow: '4px 4px 0 rgba(0,0,0,0.3)',
-              }}>
-                {meetingType === 'full_board' ? 'Launch Meeting →' : 'Select Executives →'}
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 3 && (
-          <motion.div key="step3"
-            initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -60 }}
-            transition={{ duration: 0.35 }}
-            style={{
-              background: '#FFF4E9', border: '2px solid #000', borderRadius: 16,
-              padding: '48px 56px', width: 600, boxShadow: '6px 6px 0 #000',
-              transform: 'rotate(-0.5deg)', maxHeight: '85vh', overflowY: 'auto',
-            }}
-          >
-            <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 8 }}>Select Your Board</h1>
-            <p style={{ fontSize: 20, color: 'rgba(0,0,0,0.6)', marginBottom: 24 }}>Choose which executives join the meeting.</p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
-              {ALL_EXECUTIVES.map(exec => {
-                const selected = selectedExecs.includes(exec.id);
-                return (
-                  <button key={exec.id} onClick={() => toggleExec(exec.id)} style={{
-                    padding: '16px', border: '2px solid #000', borderRadius: 12,
-                    background: selected ? '#000' : 'transparent',
-                    color: selected ? '#FFF4E9' : '#000',
-                    textAlign: 'left', cursor: 'pointer', fontFamily: "'Caveat', cursive",
-                    boxShadow: selected ? '3px 3px 0 rgba(0,0,0,0.3)' : '2px 2px 0 rgba(0,0,0,0.1)',
-                    transition: 'all 0.2s',
-                  }}>
-                    <div style={{ fontSize: 22 }}><strong style={{ fontSize: 18 }}>{exec.id}</strong></div>
-                    <div style={{ fontSize: 16, opacity: 0.75 }}>{exec.desc}</div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p style={{ fontSize: 18, color: 'rgba(0,0,0,0.6)', marginBottom: 16 }}>
-              {selectedExecs.length} executive{selectedExecs.length !== 1 ? 's' : ''} selected
-            </p>
-
-            {error && <p style={{ color: '#c0392b', fontSize: 18, marginBottom: 12 }}>{error}</p>}
-
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setStep(2)} style={{
-                flex: 1, padding: '14px', background: 'transparent', color: '#000',
-                border: '2px solid #000', borderRadius: 8, fontSize: 20, fontWeight: 600,
-                fontFamily: "'Caveat', cursive", cursor: 'pointer',
-              }}>← Back</button>
-              <button onClick={handleLaunch} disabled={isLoading} style={{
-                flex: 2, padding: '14px', background: '#000', color: '#FFF4E9',
-                border: '2px solid #000', borderRadius: 8, fontSize: 22, fontWeight: 700,
-                fontFamily: "'Caveat', cursive", cursor: isLoading ? 'wait' : 'pointer',
-                boxShadow: '4px 4px 0 rgba(0,0,0,0.3)', opacity: isLoading ? 0.7 : 1,
-              }}>
-                {isLoading ? 'Calling the board...' : 'Launch Meeting'}
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

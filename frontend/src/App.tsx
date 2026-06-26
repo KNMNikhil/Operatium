@@ -86,12 +86,47 @@ function BoardroomHome() {
             ws.disconnect();
             return;
         }
-        ws.send({
-          startup_id: startupId,
-          startup_name: startupName || '',
-          startup_description: description || '',
-          industry: industry || '',
-          executives: execs,
+        
+        api.getMeeting(meetingId).then((res) => {
+            if (isCancelled) return;
+            if (res.messages && res.messages.length > 0) {
+               const newTimeline = res.messages.map((m: any) => ({
+                   id: m.id,
+                   text: m.content,
+                   role: m.executive_role,
+                   stage: m.stage,
+                   timestamp: new Date(m.created_at)
+               }));
+               useMeetingStore.getState().setTimeline(newTimeline);
+            }
+            if (res.status === 'completed' || res.report) {
+               setStage('complete');
+               if (res.decisions) setMeetingDecisions(res.decisions);
+               // Check startup object to get report if available
+               api.getStartup(startupId).then(s => {
+                 if (s.reports && s.reports.length > 0) {
+                    useMeetingStore.getState().setReport(s.reports[0] as any);
+                    setQaState('report_ready');
+                 }
+               });
+            } else {
+               ws.send({
+                 startup_id: startupId,
+                 startup_name: startupName || '',
+                 startup_description: description || '',
+                 industry: industry || '',
+                 executives: execs,
+               });
+            }
+        }).catch(err => {
+            console.error("Failed to load meeting history", err);
+            ws.send({
+              startup_id: startupId,
+              startup_name: startupName || '',
+              startup_description: description || '',
+              industry: industry || '',
+              executives: execs,
+            });
         });
       }).catch(err => {
          if (isCancelled) return;
@@ -317,15 +352,23 @@ function BoardroomHome() {
         )}
 
         {/* About Button */}
-        <button
-          onClick={() => setShowTeamModal(true)}
-          className="absolute bottom-6 left-6 px-4 py-2 bg-[#FFF4E9] border-2 border-black rounded-lg shadow-[4px_4px_0_rgba(0,0,0,1)] font-bold text-xl font-['Caveat'] hover:translate-y-1 hover:shadow-[0px_0px_0_rgba(0,0,0,1)] transition-all z-50 pointer-events-auto rotate-[-2deg]"
-        >
-          About Us
-        </button>
+        {!(currentStage === 'complete' && showWorkflow) && (
+          <button
+            onClick={() => setShowTeamModal(true)}
+            className="absolute bottom-6 left-6 px-4 py-2 bg-[#FFF4E9] border-2 border-black rounded-lg shadow-[4px_4px_0_rgba(0,0,0,1)] font-bold text-xl font-['Caveat'] hover:translate-y-1 hover:shadow-[0px_0px_0_rgba(0,0,0,1)] transition-all z-50 pointer-events-auto rotate-[-2deg]"
+          >
+            About Us
+          </button>
+        )}
       </div>
     </div>
   );
+}
+
+// ── Report Page Wrapper ────────────────────────────────────────────────────────
+function ReportPage() {
+  const navigate = useNavigate();
+  return <PostMeetingWorkflow onContinueDiscussion={() => navigate('/')} />;
 }
 
 // ── App Router ────────────────────────────────────────────────────────────────
@@ -337,6 +380,7 @@ function App() {
         <Route path="/" element={<BoardroomHome />} />
         <Route path="/new" element={<NewStartupPage />} />
         <Route path="/workspace" element={<WorkspacePage />} />
+        <Route path="/report" element={<ReportPage />} />
       </Routes>
     </BrowserRouter>
   );
