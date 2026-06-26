@@ -3,7 +3,7 @@ from app.agents.base_executive import BaseExecutive
 
 class FinanceOperations(BaseExecutive):
     role = "Finance & Operations"
-    model_name = "qwen3.5"
+    model_name = "qwen2.5:1.5b"
     rag_tags = [
         "financial_frameworks", "unit_economics", "operations",
         "pricing_strategy", "burn_rate", "revenue_modeling",

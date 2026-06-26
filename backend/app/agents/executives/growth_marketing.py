@@ -3,7 +3,7 @@ from app.agents.base_executive import BaseExecutive
 
 class GrowthMarketing(BaseExecutive):
     role = "Growth & Marketing"
-    model_name = "qwen3.5"
+    model_name = "qwen2.5:1.5b"
     rag_tags = [
         "growth_frameworks", "marketing_frameworks", "distribution",
         "cac", "go_to_market", "viral_loops",

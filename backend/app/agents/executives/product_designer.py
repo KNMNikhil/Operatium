@@ -3,7 +3,7 @@ from app.agents.base_executive import BaseExecutive
 
 class ProductDesigner(BaseExecutive):
     role = "Product Designer"
-    model_name = "qwen3.5"
+    model_name = "qwen2.5:1.5b"
     rag_tags = [
         "ux_frameworks", "design_systems", "user_research",
         "usability", "accessibility", "interaction_design",

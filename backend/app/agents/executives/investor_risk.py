@@ -3,7 +3,7 @@ from app.agents.base_executive import BaseExecutive
 
 class InvestorRiskAdvisor(BaseExecutive):
     role = "Investor & Risk Advisor"
-    model_name = "qwen3.5"
+    model_name = "qwen2.5:1.5b"
     rag_tags = [
         "vc_frameworks", "market_sizing", "moat_frameworks",
         "risk", "investment", "due_diligence",

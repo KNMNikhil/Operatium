@@ -3,7 +3,7 @@ from app.agents.base_executive import BaseExecutive
 
 class ProductManager(BaseExecutive):
     role = "Product Manager"
-    model_name = "qwen3.5"
+    model_name = "qwen2.5:1.5b"
     rag_tags = [
         "product_frameworks", "pm_frameworks", "user_research",
         "jobs_to_be_done", "roadmap", "product_market_fit",

@@ -3,7 +3,7 @@ from app.agents.base_executive import BaseExecutive
 
 class CTO(BaseExecutive):
     role = "CTO"
-    model_name = "qwen3.5"
+    model_name = "qwen2.5:1.5b"
     rag_tags = [
         "system_design", "architecture", "database_design",
         "engineering", "scalability", "technical_feasibility",

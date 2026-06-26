@@ -30,7 +30,7 @@ from app.config import OPENROUTER_API_KEY
 def _build_decision_llm():
     """Build the decision-stage LLM with OpenRouter fallback."""
     primary = ChatOllama(
-        model="qwen3.5",
+        model="qwen2.5:1.5b",
         temperature=0.7,
     )
     
