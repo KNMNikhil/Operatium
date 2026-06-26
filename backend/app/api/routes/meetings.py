@@ -1,9 +1,10 @@
 import json
 import asyncio
+import time
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request
 from app.db.models import MeetingCreate, FollowUpRequest
 from app.db.supabase_client import get_supabase
-from app.orchestrator.graph import run_meeting, run_followup
+from app.orchestrator.graph import run_meeting, run_followup, generate_dynamic_report
 from app.orchestrator.state import MeetingState
 from app.dependencies import limiter
 from app.logger import logger
@@ -76,8 +77,9 @@ async def create_followup(request: Request, meeting_id: str, payload: FollowUpRe
     supabase = get_supabase()
     logger.info("create_followup_question", meeting_id=meeting_id)
     try:
+        startup_id = (supabase.table("meetings").select("startup_id").eq("id", meeting_id).single().execute()).data["startup_id"]
         supabase.table("followup_questions").insert({
-            "startup_id": (supabase.table("meetings").select("startup_id").eq("id", meeting_id).single().execute()).data["startup_id"],
+            "startup_id": startup_id,
             "meeting_id": meeting_id,
             "question": payload.question,
         }).execute()
@@ -89,7 +91,6 @@ async def create_followup(request: Request, meeting_id: str, payload: FollowUpRe
 @router.post("/{meeting_id}/report", response_model=dict)
 @limiter.limit("5/minute")
 async def generate_report(request: Request, meeting_id: str):
-    from app.orchestrator.graph import generate_dynamic_report
     logger.info("generate_report_attempt", meeting_id=meeting_id)
     try:
         report = await generate_dynamic_report(meeting_id)
@@ -101,16 +102,12 @@ async def generate_report(request: Request, meeting_id: str):
 @router.websocket("/ws/{meeting_id}")
 async def meeting_websocket(websocket: WebSocket, meeting_id: str):
     """
-    WebSocket endpoint for live meeting streaming.
-    
-    Client sends: { "startup_id": "...", "startup_name": "...", ... }
-    Server sends: { "type": "token|speaking|stage_change|done", "executive": "...", "data": "..." }
+    WebSocket endpoint for live meeting streaming without ARQ/Redis.
     """
     await websocket.accept()
     supabase = get_supabase()
 
     try:
-        # Receive startup info from client
         init_data = await websocket.receive_json()
 
         startup_id = init_data.get("startup_id")
@@ -126,33 +123,25 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
             await websocket.close()
             return
 
-        # ── Check for existing meeting and restore timeline ──────────────────
+        # Restore timeline
         existing_messages = supabase.table("meeting_messages").select("*").eq("meeting_id", meeting_id).order("sequence_order").execute()
         if existing_messages.data and not followup_question and not trigger_executive_questions:
-            # Restore timeline
             for msg in existing_messages.data:
-                await websocket.send_json({
-                    "type": "speaking",
-                    "executive": msg["executive_role"],
-                    "stage": msg["stage"],
-                })
-                await websocket.send_json({
-                    "type": "token",
-                    "executive": msg["executive_role"],
-                    "stage": msg["stage"],
-                    "token": msg["content"],
-                })
-                await websocket.send_json({
-                    "type": "message_complete",
-                    "executive": msg["executive_role"],
-                    "stage": msg["stage"],
-                })
+                await websocket.send_json({"type": "speaking", "executive": msg["executive_role"], "stage": msg["stage"]})
+                await websocket.send_json({"type": "token", "executive": msg["executive_role"], "stage": msg["stage"], "token": msg["content"]})
+                await websocket.send_json({"type": "message_complete", "executive": msg["executive_role"], "stage": msg["stage"]})
 
-        # ── Offload to ARQ Worker ────────────────────────────────────────────
-        arq_pool = getattr(websocket.app.state, "redis_pool", None)
-        
+        async def on_stream(stage: str, executive: str, token: str):
+            if token == "__done__":
+                await websocket.send_json({"type": "message_complete", "executive": executive, "stage": stage})
+            elif token == "__speaking__":
+                await websocket.send_json({"type": "speaking", "executive": executive, "stage": stage})
+            elif token == "__stage_change__":
+                await websocket.send_json({"type": "stage_change", "executive": executive, "stage": stage})
+            else:
+                await websocket.send_json({"type": "token", "executive": executive, "stage": stage, "token": token})
+
         if followup_question:
-            import time
             try:
                 supabase.table("meeting_messages").insert({
                     "meeting_id": meeting_id,
@@ -166,25 +155,24 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
                 logger.error("ws_db_save_founder_question_failed", error=str(e))
 
             messages = supabase.table("meeting_messages").select("executive_role, content, stage").eq("meeting_id", meeting_id).order("sequence_order").limit(20).execute()
-            history = "\n".join([
-                f"[{m['stage'].upper()}] {m['executive_role']}: {m['content'][:200]}..."
-                for m in (messages.data or [])
-            ])
+            history = "\n".join([f"[{m['stage'].upper()}] {m['executive_role']}: {m['content'][:200]}..." for m in (messages.data or [])])
+            
+            # Execute Followup
+            await run_followup(
+                startup_name=startup_name,
+                startup_id=startup_id,
+                meeting_id=meeting_id,
+                question=followup_question,
+                executives=executives,
+                meeting_history=history,
+                on_stream=on_stream
+            )
+            # Signal Done
+            await websocket.send_json({"type": "message_complete", "executive": "Followup Done", "stage": "followup"})
 
-            if arq_pool:
-                await arq_pool.enqueue_job(
-                    'execute_followup_task',
-                    meeting_id, startup_name, startup_id, followup_question, executives, history
-                )
-            else:
-                raise Exception("ARQ Worker pool is not available.")
-                
         elif trigger_executive_questions:
-            # Note: For full production, executive_questions should also be an ARQ task. 
-            # Skipping implementation details here to focus on main flows.
             pass
         else:
-            # Fresh meeting or Resume
             state: MeetingState = {
                 "startup_id": startup_id,
                 "meeting_id": meeting_id,
@@ -201,60 +189,27 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
                 "error": None,
                 "existing_messages": existing_messages.data if existing_messages.data else []
             }
-            if arq_pool:
-                await arq_pool.enqueue_job('execute_meeting_task', meeting_id, state)
-            else:
-                raise Exception("ARQ Worker pool is not available.")
+            
+            # Run the meeting synchronously on the async loop, feeding tokens to the socket
+            await run_meeting(state, on_stream)
+            
+            # Generate Report
+            await generate_dynamic_report(meeting_id)
 
-        # ── Listen to Redis PubSub ───────────────────────────────────────────
-        import redis.asyncio as redis
-        from app.config import REDIS_URL
-        from app.cache import invalidate_cache
-        
-        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-        pubsub = redis_client.pubsub()
-        await pubsub.subscribe(f"meeting:{meeting_id}:stream")
-        
-        async for message in pubsub.listen():
-            if message["type"] == "message":
-                payload = json.loads(message["data"])
-                
-                if "error" in payload:
-                    await websocket.send_json({"type": "error", "data": payload["error"]})
-                    break
-                    
-                token = payload.get("token")
-                if token == "__meeting_complete__":
-                    try:
-                        report = supabase.table("reports").select("*").eq("meeting_id", meeting_id).order("created_at", desc=True).limit(1).execute()
-                        decisions = supabase.table("decisions").select("*").eq("meeting_id", meeting_id).execute()
-                        await websocket.send_json({
-                            "type": "meeting_complete",
-                            "report": report.data[0] if report.data else {},
-                            "decisions": decisions.data,
-                        })
-                    except Exception:
-                        await websocket.send_json({"type": "meeting_complete"})
-                        
-                    await invalidate_cache(f"meeting:{meeting_id}:details")
-                    await invalidate_cache(f"startup:{startup_id}:details")
-                    break
-                    
-                elif token == "__done__":
-                    await websocket.send_json({
-                        "type": "message_complete",
-                        "executive": payload.get("executive"),
-                        "stage": payload.get("stage"),
-                    })
-                    if followup_question:
-                        break # End stream for followup
-                else:
-                    await websocket.send_json({
-                        "type": "token" if token else "speaking" if token == "__speaking__" else "stage_change",
-                        "executive": payload.get("executive"),
-                        "stage": payload.get("stage"),
-                        "token": token,
-                    })
+            # Send Completion Payload
+            try:
+                report = supabase.table("reports").select("*").eq("meeting_id", meeting_id).order("created_at", desc=True).limit(1).execute()
+                decisions = supabase.table("decisions").select("*").eq("meeting_id", meeting_id).execute()
+                await websocket.send_json({
+                    "type": "meeting_complete",
+                    "report": report.data[0] if report.data else {},
+                    "decisions": decisions.data,
+                })
+            except Exception:
+                await websocket.send_json({"type": "meeting_complete"})
+            
+            await invalidate_cache(f"meeting:{meeting_id}:details")
+            await invalidate_cache(f"startup:{startup_id}:details")
 
     except WebSocketDisconnect:
         logger.info("ws_client_disconnected", meeting_id=meeting_id)
