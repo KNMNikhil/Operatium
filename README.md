@@ -1,4 +1,4 @@
-# Operatium: An Autonomous Multi-Agent Board of Directors
+# Operatium: AI Boardroom
 
 ![Operatium Overview](https://img.shields.io/badge/Status-Active-brightgreen.svg)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
