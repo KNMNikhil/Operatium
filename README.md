@@ -29,7 +29,25 @@ Operatium is designed to be robust and flexible, with fallback mechanisms built 
 ### 3. Knowledge Base and Embeddings
 - **Embedding Model:** Google gemini-embedding-001 (requires API key).
 - **Vector Database:** Supabase PostgreSQL with the pgvector extension.
-- **Usage:** Ingests PDFs, articles, and frameworks (e.g., Y Combinator essays) so that executives base their decisions on established industry knowledge rather than broad generalizations.
+- **RAG Resources:** The system's knowledge base is designed to be primed with authoritative startup literature. By default, it operates on principles derived from:
+  - **Y Combinator Essays & Playbooks:** For high-growth strategies and fundraising.
+  - **The Lean Startup Methodology:** For iterative MVP development and validation.
+  - **Modern System Design Interviews:** For scalable technical architecture.
+  - **Venture Capital Frameworks:** For financial modeling and risk assessment.
+
+---
+
+## The AI Executive Board
+
+Operatium simulates a full C-suite. Each autonomous agent is strictly prompted to focus purely on their domain expertise and relentlessly debate the startup's flaws before reaching a consensus.
+
+- 👑 **CEO (Chief Executive Officer):** Evaluates the overall vision, market opportunity, and acts as the final decision-maker to synthesize the ultimate strategy.
+- ⚙️ **CTO (Chief Technology Officer):** Scrutinizes technical feasibility, architecture choices, scalability, and engineering bottlenecks.
+- 🗺️ **Product Manager:** Scopes the Minimum Viable Product (MVP), defines user personas, and builds the product roadmap.
+- 🎨 **Product Designer:** Focuses on User Experience (UX), user flows, and interface friction points.
+- 📈 **Growth & Marketing:** Formulates the Go-To-Market (GTM) strategy, customer acquisition channels, and viral loops.
+- 💰 **Finance & Operations:** Analyzes revenue models, unit economics, runway, and pricing strategy.
+- 🎯 **Investor & Risk Advisor:** Plays devil's advocate to expose market risks, regulatory hurdles, and scrutinizes investor readiness.
 
 ---
 
