@@ -162,11 +162,19 @@ End with 1 specific question for your colleagues if you have them, still keeping
             "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
             "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
             "Abandon your polite persona and do not be nice."
-        ) if meeting_type == "shark_tank" else ""
+        ) if "shark_tank" in meeting_type else ""
+
+        investor_lens_rule = (
+            "INVESTOR LENS ENABLED: You are evaluating this idea purely from a Venture Capital perspective. "
+            "Focus heavily on the moat, unit economics, market size (TAM/SAM/SOM), and exit potential. "
+            "What would a VC ask? What concerns would they raise?"
+        ) if "investor_lens" in meeting_type else ""
 
         sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
         if shark_tank_rule:
             sys_content += "\n\n" + shark_tank_rule
+        if investor_lens_rule:
+            sys_content += "\n\n" + investor_lens_rule
 
         messages = [
             SystemMessage(content=sys_content),
@@ -232,11 +240,19 @@ Be direct and specific. Reference colleagues by role. Keep your response extreme
             "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
             "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
             "Abandon your polite persona and do not be nice."
-        ) if meeting_type == "shark_tank" else ""
+        ) if "shark_tank" in meeting_type else ""
+
+        investor_lens_rule = (
+            "INVESTOR LENS ENABLED: You are evaluating this idea purely from a Venture Capital perspective. "
+            "Focus heavily on the moat, unit economics, market size (TAM/SAM/SOM), and exit potential. "
+            "What would a VC ask? What concerns would they raise?"
+        ) if "investor_lens" in meeting_type else ""
 
         sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
         if shark_tank_rule:
             sys_content += "\n\n" + shark_tank_rule
+        if investor_lens_rule:
+            sys_content += "\n\n" + investor_lens_rule
 
         messages = [
             SystemMessage(content=sys_content),
@@ -291,11 +307,19 @@ CRITICAL: Keep your response extremely brief, strictly under 15 words. Form a co
             "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
             "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
             "Abandon your polite persona and do not be nice."
-        ) if meeting_type == "shark_tank" else ""
+        ) if "shark_tank" in meeting_type else ""
+
+        investor_lens_rule = (
+            "INVESTOR LENS ENABLED: You are evaluating this idea purely from a Venture Capital perspective. "
+            "Focus heavily on the moat, unit economics, market size (TAM/SAM/SOM), and exit potential. "
+            "What would a VC ask? What concerns would they raise?"
+        ) if "investor_lens" in meeting_type else ""
 
         sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
         if shark_tank_rule:
             sys_content += "\n\n" + shark_tank_rule
+        if investor_lens_rule:
+            sys_content += "\n\n" + investor_lens_rule
 
         messages = [
             SystemMessage(content=sys_content),
@@ -339,8 +363,26 @@ Based on your role's perspective, identify one critical doubt or deep open quest
 Ask the founder this question directly. Be intelligent, insightful, and concise. Do NOT just repeat a generic question.
 Form a complete sentence and use the exact startup name "{startup_name}"."""
 
+        shark_tank_rule = (
+            "SHARK TANK MODE ENABLED: You are an extremely hostile, skeptical venture capitalist. "
+            "Aggressively hunt for flaws, demand hard numbers, and ruthlessly roast the idea. "
+            "Abandon your polite persona and do not be nice."
+        ) if "shark_tank" in meeting_type else ""
+
+        investor_lens_rule = (
+            "INVESTOR LENS ENABLED: You are evaluating this idea purely from a Venture Capital perspective. "
+            "Focus heavily on the moat, unit economics, market size (TAM/SAM/SOM), and exit potential. "
+            "What would a VC ask? What concerns would they raise?"
+        ) if "investor_lens" in meeting_type else ""
+
+        sys_content = self.system_prompt + "\n\n" + RAG_SYSTEM_RULES
+        if shark_tank_rule:
+            sys_content += "\n\n" + shark_tank_rule
+        if investor_lens_rule:
+            sys_content += "\n\n" + investor_lens_rule
+
         messages = [
-            SystemMessage(content=self.system_prompt + "\n\n" + RAG_SYSTEM_RULES),
+            SystemMessage(content=sys_content),
             HumanMessage(content=prompt),
         ]
 

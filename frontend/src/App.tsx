@@ -245,6 +245,14 @@ function BoardroomHome() {
               </div>
             </div>
 
+            {/* Center: Startup Name */}
+            {meetingId && startupName && (
+              <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto', textAlign: 'center', background: 'rgba(255, 244, 233, 0.9)', padding: '8px 24px', borderRadius: 12, border: '2px solid #000', boxShadow: '4px 4px 0 rgba(0,0,0,1)' }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#000', letterSpacing: '0.05em' }}>{startupName}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(0,0,0,0.5)', textTransform: 'uppercase' }}>Active Board Session</div>
+              </div>
+            )}
+
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'auto' }}
             >

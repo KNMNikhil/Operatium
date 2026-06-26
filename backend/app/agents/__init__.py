@@ -5,6 +5,7 @@ from app.agents.executives.product_designer import ProductDesigner
 from app.agents.executives.growth_marketing import GrowthMarketing
 from app.agents.executives.finance_operations import FinanceOperations
 from app.agents.executives.investor_risk import InvestorRiskAdvisor
+from app.agents.executives.red_team import RedTeam
 from app.agents.base_executive import BaseExecutive
 
 EXECUTIVE_REGISTRY: dict[str, BaseExecutive] = {
@@ -15,6 +16,7 @@ EXECUTIVE_REGISTRY: dict[str, BaseExecutive] = {
     "Growth & Marketing": GrowthMarketing(),
     "Finance & Operations": FinanceOperations(),
     "Investor & Risk Advisor": InvestorRiskAdvisor(),
+    "Red Team (Devil's Advocate)": RedTeam(),
 }
 
 def get_executive(role: str) -> BaseExecutive | None:

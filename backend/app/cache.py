@@ -5,7 +5,13 @@ from app.config import REDIS_URL
 from app.logger import logger
 
 try:
-    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+    redis_client = redis.from_url(
+        REDIS_URL,
+        decode_responses=True,
+        socket_timeout=1.0,
+        socket_connect_timeout=1.0,
+        retry_on_timeout=False
+    )
 except Exception as e:
     logger.error("redis_init_failed", error=str(e))
     redis_client = None

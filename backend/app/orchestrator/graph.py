@@ -256,6 +256,24 @@ CRITICAL: You are writing this for a non-technical audience. Use simple, everyda
 1. ...
 2. ...
 3. ...
+
+**ASSUMPTION REGISTRY**:
+- [Assumption 1 the team made]
+- [Assumption 2]
+- [Assumption 3]
+
+**KILL CRITERIA** (Set rules on when to kill the idea if things fail):
+- IF [Failure Condition 1] -> KILL IT
+- IF [Failure Condition 2] -> KILL IT
+
+**CUSTOMER INTERVIEW PLAYBOOK**:
+[Provide a short interview script and what to look for when interviewing customers]
+
+**COMPETITIVE THREAT ASSESSMENT**:
+[Based on the Growth & Marketing analysis, list the top competitors, their execution speed, and the threat level]
+
+**BURN RATE CALCULATION**:
+[Based on Finance & Operations, estimate the initial burn rate, runway, and financial requirements]
 """
         llm = _build_decision_llm()
         decision_text = ""
@@ -313,7 +331,7 @@ CRITICAL: You are writing this for a non-technical audience. Use simple, everyda
                 upper_line = line.upper()
                 
                 is_header_line = False
-                if any(h in upper_line for h in ["DASHBOARD", "STRENGTHS", "CRITICAL RISKS", "RECOMMENDATIONS", "KEY DECISIONS", "IMMEDIATE NEXT STEPS", "ELEVATOR PITCH", "Q&A HISTORY"]):
+                if any(h in upper_line for h in ["DASHBOARD", "STRENGTHS", "CRITICAL RISKS", "RECOMMENDATIONS", "KEY DECISIONS", "IMMEDIATE NEXT STEPS", "ELEVATOR PITCH", "Q&A HISTORY", "ASSUMPTION REGISTRY", "KILL CRITERIA", "CUSTOMER INTERVIEW PLAYBOOK", "COMPETITIVE THREAT ASSESSMENT", "BURN RATE CALCULATION"]):
                     if line.startswith("**") or line.startswith("##") or (":" in line and len(line) < 200):
                         is_header_line = True
 
@@ -349,6 +367,34 @@ CRITICAL: You are writing this for a non-technical audience. Use simple, everyda
         risks = extract_list("CRITICAL RISKS")
         recommendations = extract_list("RECOMMENDATIONS")
         decisions = extract_list("KEY DECISIONS")
+        assumptions = extract_list("ASSUMPTION REGISTRY")
+        kill_criteria = extract_list("KILL CRITERIA")
+
+        def extract_section_text(header: str) -> str:
+            content = ""
+            in_section = False
+            for line in decision_text.split("\n"):
+                line_stripped = line.strip()
+                upper_line = line_stripped.upper()
+                
+                is_header_line = False
+                if any(h in upper_line for h in ["DASHBOARD", "STRENGTHS", "CRITICAL RISKS", "RECOMMENDATIONS", "KEY DECISIONS", "IMMEDIATE NEXT STEPS", "ELEVATOR PITCH", "Q&A HISTORY", "ASSUMPTION REGISTRY", "KILL CRITERIA", "CUSTOMER INTERVIEW PLAYBOOK", "COMPETITIVE THREAT ASSESSMENT", "BURN RATE CALCULATION"]):
+                    if line_stripped.startswith("**") or line_stripped.startswith("##") or (":" in line_stripped and len(line_stripped) < 200):
+                        is_header_line = True
+
+                if header.upper() in upper_line and is_header_line:
+                    in_section = True
+                    continue
+                
+                if in_section:
+                    if is_header_line and header.upper() not in upper_line:
+                        break
+                    content += line + "\n"
+            return content.strip()
+
+        interview_playbook = extract_section_text("CUSTOMER INTERVIEW PLAYBOOK")
+        competitor_threats = extract_section_text("COMPETITIVE THREAT ASSESSMENT")
+        burn_rate_calc = extract_section_text("BURN RATE CALCULATION")
 
         # Save decisions to DB
         try:
@@ -371,6 +417,11 @@ CRITICAL: You are writing this for a non-technical audience. Use simple, everyda
             "risks": risks,
             "recommendations": recommendations,
             "decisions": decisions,
+            "assumptions": assumptions,
+            "kill_criteria": kill_criteria,
+            "interview_playbook": interview_playbook,
+            "competitor_threats": competitor_threats,
+            "burn_rate_calc": burn_rate_calc,
             "analysis": analyses,
         }
 

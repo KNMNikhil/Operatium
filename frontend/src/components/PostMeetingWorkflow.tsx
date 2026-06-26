@@ -90,7 +90,8 @@ ${Object.entries(analysis).map(([role, text]) => `### ${role}\n${stripMd(text as
     // @ts-ignore
     const html2pdf = (await import('html2pdf.js')).default;
     const element = document.getElementById('report-content');
-    const opt = {
+    if (!element) return;
+    const opt: any = {
       margin:       0.5,
       filename:     `${ideaTitle.replace(/\s+/g, '_')}_Report.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
@@ -228,6 +229,152 @@ ${Object.entries(analysis).map(([role, text]) => `### ${role}\n${stripMd(text as
             </div>
           </div>
         </div>
+
+        {/* NEW SECTIONS GRID */}
+        {(content.assumptions?.length > 0 || content.kill_criteria?.length > 0 || content.burn_rate_calc) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            
+            {/* Assumptions & Kill Criteria */}
+            <div className="border-2 border-black bg-red-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[0.5deg]">
+              <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-red-900">Assumptions & Kill Criteria</h2>
+              
+              {content.assumptions?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-3 flex items-center gap-2">🧠 Key Assumptions</h3>
+                  <ul className="space-y-3">
+                    {content.assumptions.map((a: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-xl">
+                        <span className="font-bold text-black/50">#{i+1}</span>
+                        <span>{renderWithTooltips(a)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {content.kill_criteria?.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold mb-3 flex items-center gap-2">☠️ Kill Criteria (When to Stop)</h3>
+                  <ul className="space-y-3">
+                    {content.kill_criteria.map((kc: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-xl bg-red-100 p-3 rounded border border-red-200">
+                        <span className="font-bold text-red-600">☠️</span>
+                        <span>{renderWithTooltips(kc)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Burn Rate Calculator */}
+            {content.burn_rate_calc && (
+              <div className="border-2 border-black bg-green-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[-0.5deg]">
+                <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-green-900">Burn Rate & Runway</h2>
+                <div className="text-xl whitespace-pre-wrap leading-relaxed">
+                  {renderWithTooltips(content.burn_rate_calc)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(content.interview_playbook || content.competitor_threats) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            {/* Interview Playbook */}
+            {content.interview_playbook && (
+              <div className="border-2 border-black bg-blue-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[-0.5deg]">
+                <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-blue-900">Customer Interview Playbook</h2>
+                <div className="text-xl whitespace-pre-wrap leading-relaxed">
+                  {renderWithTooltips(content.interview_playbook)}
+                </div>
+              </div>
+            )}
+
+            {/* Competitor Threat Assessment */}
+            {content.competitor_threats && (
+              <div className="border-2 border-black bg-purple-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[0.5deg]">
+                <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-purple-900">Competitor Threat Matrix</h2>
+                <div className="text-xl whitespace-pre-wrap leading-relaxed">
+                  {renderWithTooltips(content.competitor_threats)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* NEW SECTIONS GRID */}
+        {(content.assumptions?.length > 0 || content.kill_criteria?.length > 0 || content.burn_rate_calc) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            
+            {/* Assumptions & Kill Criteria */}
+            <div className="border-2 border-black bg-red-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[0.5deg]">
+              <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-red-900">Assumptions & Kill Criteria</h2>
+              
+              {content.assumptions?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-3 flex items-center gap-2">🧠 Key Assumptions</h3>
+                  <ul className="space-y-3">
+                    {content.assumptions.map((a: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-xl">
+                        <span className="font-bold text-black/50">#{i+1}</span>
+                        <span>{renderWithTooltips(a)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {content.kill_criteria?.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold mb-3 flex items-center gap-2">☠️ Kill Criteria (When to Stop)</h3>
+                  <ul className="space-y-3">
+                    {content.kill_criteria.map((kc: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-xl bg-red-100 p-3 rounded border border-red-200">
+                        <span className="font-bold text-red-600">☠️</span>
+                        <span>{renderWithTooltips(kc)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Burn Rate Calculator */}
+            {content.burn_rate_calc && (
+              <div className="border-2 border-black bg-green-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[-0.5deg]">
+                <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-green-900">Burn Rate & Runway</h2>
+                <div className="text-xl whitespace-pre-wrap leading-relaxed">
+                  {renderWithTooltips(content.burn_rate_calc)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(content.interview_playbook || content.competitor_threats) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            {/* Interview Playbook */}
+            {content.interview_playbook && (
+              <div className="border-2 border-black bg-blue-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[-0.5deg]">
+                <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-blue-900">Customer Interview Playbook</h2>
+                <div className="text-xl whitespace-pre-wrap leading-relaxed">
+                  {renderWithTooltips(content.interview_playbook)}
+                </div>
+              </div>
+            )}
+
+            {/* Competitor Threat Assessment */}
+            {content.competitor_threats && (
+              <div className="border-2 border-black bg-purple-50 rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[0.5deg]">
+                <h2 className="text-3xl font-bold mb-6 underline decoration-wavy text-purple-900">Competitor Threat Matrix</h2>
+                <div className="text-xl whitespace-pre-wrap leading-relaxed">
+                  {renderWithTooltips(content.competitor_threats)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {content.qa_history && content.qa_history.length > 0 && (
           <div className="mt-8 border-2 border-black bg-white rounded-xl p-8 shadow-[6px_6px_0_rgba(0,0,0,1)] transform rotate-[-0.5deg]">

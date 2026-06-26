@@ -28,6 +28,7 @@ export interface Meeting {
   completed_at?: string;
   messages?: MeetingMessage[];
   decisions?: Decision[];
+  report?: Report;
 }
 
 export interface MeetingMessage {
