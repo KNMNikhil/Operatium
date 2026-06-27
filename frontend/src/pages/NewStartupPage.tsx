@@ -78,6 +78,7 @@ export function NewStartupPage() {
   const [stage, setStage] = useState('Idea Stage');
   const [selectedExecs, setSelectedExecs] = useState<string[]>(ALL_EXECUTIVES.map(e => e.id));
   const [isLoading, setIsLoading] = useState(false);
+  const [isClassifying, setIsClassifying] = useState(false);
   const [error, setError] = useState('');
   const [industryManuallySet, setIndustryManuallySet] = useState(false);
 
@@ -85,7 +86,7 @@ export function NewStartupPage() {
     if (industryManuallySet || !description.trim() || description.length < 10) return;
 
     const timeoutId = setTimeout(async () => {
-      setIsLoading(true);
+      setIsClassifying(true);
       try {
         const res = await api.classifyStartup(description);
         
@@ -101,7 +102,7 @@ export function NewStartupPage() {
       } catch (err) {
         console.error("Failed to classify industry", err);
       } finally {
-        setIsLoading(false);
+        setIsClassifying(false);
       }
     }, 1500); // Debounce 1.5s
 
@@ -248,7 +249,10 @@ export function NewStartupPage() {
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 18, fontWeight: 700, display: 'block', marginBottom: 4 }}>Industry (Select up to 3)</label>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <label style={{ fontSize: 18, fontWeight: 700 }}>Industry (Select up to 3)</label>
+            {isClassifying && <span style={{ fontSize: 14, color: '#ef4444', fontWeight: 600, animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>AI Auto-selecting...</span>}
+          </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select
               value={industryPrimary} onChange={e => { setIndustryPrimary(e.target.value); setIndustryManuallySet(true); }}
