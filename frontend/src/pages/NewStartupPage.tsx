@@ -88,9 +88,16 @@ export function NewStartupPage() {
       setIsLoading(true);
       try {
         const res = await api.classifyStartup(description);
-        if (res.primary && !industryManuallySet) setIndustryPrimary(res.primary);
-        if (res.secondary && !industryManuallySet) setIndustrySecondary(res.secondary);
-        if (res.tertiary && !industryManuallySet) setIndustryThird(res.tertiary);
+        
+        const matchIndustry = (val: string) => {
+          if (!val) return '';
+          const lower = val.toLowerCase();
+          return INDUSTRIES.find(i => i.toLowerCase() === lower) || '';
+        };
+
+        if (res.primary && !industryManuallySet) setIndustryPrimary(matchIndustry(res.primary));
+        if (res.secondary && !industryManuallySet) setIndustrySecondary(matchIndustry(res.secondary));
+        if (res.tertiary && !industryManuallySet) setIndustryThird(matchIndustry(res.tertiary));
       } catch (err) {
         console.error("Failed to classify industry", err);
       } finally {
