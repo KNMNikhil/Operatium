@@ -276,6 +276,26 @@ function BoardroomHome() {
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'auto' }}
             >
+              {isMeetingActive && (
+                <button
+                  onClick={async () => {
+                    if (meetingId) {
+                      await api.endMeeting(meetingId);
+                      window.location.reload();
+                    }
+                  }}
+                  style={{
+                    padding: '7px 18px', borderRadius: '4px',
+                    border: '2px solid #ef4444', background: '#fef2f2',
+                    cursor: 'pointer', fontSize: 18, fontWeight: 600, color: '#ef4444',
+                    fontFamily: "'Caveat', cursive", transform: 'rotate(-1deg)',
+                    boxShadow: '2px 2px 0 #ef4444',
+                    WebkitTextFillColor: '#ef4444'
+                  }}
+                >
+                  End Meeting
+                </button>
+              )}
               <button
                 onClick={() => navigate('/workspace')}
                 style={{

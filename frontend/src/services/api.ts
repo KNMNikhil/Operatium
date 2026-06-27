@@ -110,6 +110,9 @@ export const api = {
   pivotMeeting: (meeting_id: string) =>
     apiFetch<{ status: string, startup_id: string, name: string, description: string }>(`/api/meetings/${meeting_id}/pivot`, { method: 'POST' }),
 
+  endMeeting: (meetingId: string) =>
+    apiFetch<{ status: string }>(`/api/meetings/${meetingId}/end`, { method: 'POST' }),
+
   // Health
   health: () =>
     apiFetch<{ status: string }>('/health'),

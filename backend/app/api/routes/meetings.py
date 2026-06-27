@@ -99,6 +99,27 @@ async def generate_report(request: Request, meeting_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{meeting_id}/end", response_model=dict)
+@limiter.limit("10/minute")
+async def end_meeting(request: Request, meeting_id: str):
+    supabase = get_supabase()
+    logger.info("end_meeting_attempt", meeting_id=meeting_id)
+    try:
+        from datetime import datetime
+        import asyncio
+        supabase.table("meetings").update({
+            "status": "completed",
+            "completed_at": datetime.utcnow().isoformat(),
+        }).eq("id", meeting_id).execute()
+        
+        # Optionally generate report in the background
+        asyncio.create_task(generate_dynamic_report(meeting_id))
+        
+        await invalidate_cache(f"meeting:{meeting_id}:details")
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/{meeting_id}/pivot", response_model=dict)
 @limiter.limit("5/minute")
 async def pivot_meeting(request: Request, meeting_id: str):
