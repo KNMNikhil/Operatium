@@ -232,8 +232,15 @@ async def meeting_websocket(websocket: WebSocket, meeting_id: str):
         elif trigger_executive_questions:
             pass
         else:
-            meeting_data = supabase.table("meetings").select("meeting_type").eq("id", meeting_id).single().execute()
+            meeting_data = supabase.table("meetings").select("status, meeting_type").eq("id", meeting_id).single().execute()
             meeting_type = meeting_data.data.get("meeting_type", "full_board") if meeting_data.data else "full_board"
+            status = meeting_data.data.get("status", "pending") if meeting_data.data else "pending"
+
+            if status == "completed":
+                # Meeting is already done. We restored timeline above.
+                # Signal completion so UI jumps to QA phase immediately.
+                await websocket.send_json({"type": "meeting_complete"})
+                return
 
             state: MeetingState = {
                 "startup_id": startup_id,

@@ -574,75 +574,18 @@ async def run_followup(
 
     await on_stream("followup", "", "__stage_change__")
 
-    # Smart Routing: Ask LLM which executives should answer
-    from langchain_core.messages import HumanMessage
-    router_prompt = f"""Analyze this question from the founder: "{question}"
-Which two of these executives are best suited to provide specialized insights before the CEO gives the final answer?
-Available Executives: {', '.join([r for r in executives if r != 'CEO'])}
-Return ONLY their exact titles separated by a comma (e.g., "CTO, Finance & Operations"). If the question explicitly asks for the CEO or is purely general, you can just return nothing."""
-    
-    routing_response = ""
-    if "CEO" in exec_map:
-        try:
-            resp = await exec_map["CEO"].llm.ainvoke([HumanMessage(content=router_prompt)])
-            routing_response = resp.content
-        except Exception:
-            routing_response = ""
-
-    discussion_roles = []
-    for r in executives:
-        if r != "CEO" and r in routing_response:
-            discussion_roles.append(r)
-    
-    # Fallback if routing fails or returns empty
-    if not discussion_roles:
-        discussion_roles = [r for r in executives if r != "CEO"][:2]
-    else:
-        # cap at 2 max
-        discussion_roles = discussion_roles[:2]
-
     recent_discussion_text = ""
-
-    for role in discussion_roles:
-        executive = exec_map[role]
-        await on_stream("followup", role, "__speaking__")
-
-        full_text = ""
-        async for token in executive.answer_followup(
-            startup_name=startup_name,
-            question=question,
-            meeting_history=meeting_history,
-            startup_id=startup_id,
-            meeting_type=meeting_type,
-        ):
-            full_text += token
-            await on_stream("followup", role, token)
-
-        await on_stream("followup", role, "__done__")
-        recent_discussion_text += f"[{role}]: {full_text}\n"
-
-        msg_sequence += 1
-        try:
-            supabase.table("meeting_messages").insert({
-                "meeting_id": meeting_id,
-                "executive_role": role,
-                "content": full_text,
-                "message_type": "followup",
-                "stage": "followup",
-                "sequence_order": msg_sequence,
-            }).execute()
-        except Exception as e:
-            print(f"[DB] Failed to save followup: {e}")
-
-        await asyncio.sleep(0.2)
 
     # CEO Final Synthesis
     if "CEO" in exec_map:
         await on_stream("followup", "CEO", "__speaking__")
         from langchain_core.messages import SystemMessage, HumanMessage
-        prompt = f"""You are the CEO of Operatium. The founder asked: "{question}"
-Your executive team just provided these brief thoughts:
-{recent_discussion_text}
+        prompt = f"""You are the CEO of Operatium. Based on the following meeting history, answer the founder's follow-up question.
+
+MEETING HISTORY:
+{meeting_history}
+
+FOUNDER'S QUESTION: "{question}"
 
 Provide the final, highly structured, comprehensive, and innovative answer to the founder. 
 DO NOT summarize or repeat the discussion of the executives. The founder wants a direct, extremely clear ANSWER to their specific question based on the insights provided. Focus entirely on giving them the exact result, actionable advice, or explanation they asked for.
