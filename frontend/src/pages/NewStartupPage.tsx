@@ -68,6 +68,9 @@ export function NewStartupPage() {
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [industryPrimary, setIndustryPrimary] = useState('');
+  const [industrySecondary, setIndustrySecondary] = useState('');
+  const [industryThird, setIndustryThird] = useState('');
   const [isSharkTank, setIsSharkTank] = useState(false);
   const [isInvestorLens, setIsInvestorLens] = useState(false);
   const [includeRedTeam, setIncludeRedTeam] = useState(false);
@@ -76,7 +79,27 @@ export function NewStartupPage() {
   const [selectedExecs, setSelectedExecs] = useState<string[]>(ALL_EXECUTIVES.map(e => e.id));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [industryManuallySet, setIndustryManuallySet] = useState(false);
 
+  React.useEffect(() => {
+    if (industryManuallySet || !description.trim() || description.length < 10) return;
+
+    const timeoutId = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.classifyStartup(description);
+        if (res.primary && !industryManuallySet) setIndustryPrimary(res.primary);
+        if (res.secondary && !industryManuallySet) setIndustrySecondary(res.secondary);
+        if (res.tertiary && !industryManuallySet) setIndustryThird(res.tertiary);
+      } catch (err) {
+        console.error("Failed to classify industry", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 1500); // Debounce 1.5s
+
+    return () => clearTimeout(timeoutId);
+  }, [description, industryManuallySet]);
 
   const toggleExec = (id: string) => {
     setSelectedExecs(prev =>
@@ -85,8 +108,8 @@ export function NewStartupPage() {
   };
 
   const handleNext = async () => {
-    if (!name.trim() || !description.trim()) {
-      setError('Please fill in all required fields (Name and Description).');
+    if (!name.trim() || !description.trim() || !industryPrimary || !industrySecondary) {
+      setError('Please fill in all required fields (Name, Description, Primary, and Secondary Industry).');
       return;
     }
     setError('');
@@ -109,6 +132,7 @@ export function NewStartupPage() {
     setError('');
 
     try {
+      const combinedIndustry = [industryPrimary, industrySecondary, industryThird].filter(Boolean).join(', ');
 
       let execs = [...selectedExecs];
       if (includeRedTeam) {
@@ -123,7 +147,7 @@ export function NewStartupPage() {
       const startup = await api.createStartup({
         name,
         description: `${description}\n\n[CAPITAL: ${capital || 'Unknown'}]\n[STAGE: ${stage}]`,
-        industry: "AI_GENERATED", // The backend will overwrite this
+        industry: combinedIndustry,
         executives: execs,
       });
 
@@ -136,7 +160,7 @@ export function NewStartupPage() {
         executives: execs,
       });
 
-      navigate(`/?meetingId=${meeting.id}&startup_id=${startup.id}&startup_name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&industry=${encodeURIComponent("AI_GENERATED")}&execs=${encodeURIComponent(execs.join(','))}&meeting_type=${encodeURIComponent(finalMeetingType)}`);
+      navigate(`/?meetingId=${meeting.id}&startup_id=${startup.id}&startup_name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&industry=${encodeURIComponent(combinedIndustry)}&execs=${encodeURIComponent(execs.join(','))}&meeting_type=${encodeURIComponent(finalMeetingType)}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create startup. Check if the backend is running.');
     } finally {
@@ -216,6 +240,46 @@ export function NewStartupPage() {
           />
         </div>
 
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 18, fontWeight: 700, display: 'block', marginBottom: 4 }}>Industry (Select up to 3)</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <select
+              value={industryPrimary} onChange={e => { setIndustryPrimary(e.target.value); setIndustryManuallySet(true); }}
+              style={{
+                flex: '1', minWidth: '120px', border: '2px solid #000', borderRadius: 8, padding: '8px 10px',
+                fontSize: 16, fontFamily: "'Caveat', cursive", background: 'transparent',
+                outline: 'none', color: '#000', cursor: 'pointer', appearance: 'none'
+              }}
+            >
+              <option value="" disabled>Primary (Required)</option>
+              {INDUSTRIES.map(ind => <option key={ind} value={ind} disabled={ind === industrySecondary || ind === industryThird}>{ind}</option>)}
+            </select>
+
+            <select
+              value={industrySecondary} onChange={e => { setIndustrySecondary(e.target.value); setIndustryManuallySet(true); }}
+              style={{
+                flex: '1', minWidth: '120px', border: '2px solid #000', borderRadius: 8, padding: '8px 10px',
+                fontSize: 16, fontFamily: "'Caveat', cursive", background: 'transparent',
+                outline: 'none', color: '#000', cursor: 'pointer', appearance: 'none'
+              }}
+            >
+              <option value="" disabled>Secondary (Required)</option>
+              {INDUSTRIES.map(ind => <option key={ind} value={ind} disabled={ind === industryPrimary || ind === industryThird}>{ind}</option>)}
+            </select>
+
+            <select
+              value={industryThird} onChange={e => { setIndustryThird(e.target.value); setIndustryManuallySet(true); }}
+              style={{
+                flex: '1', minWidth: '120px', border: '2px solid #000', borderRadius: 8, padding: '8px 10px',
+                fontSize: 16, fontFamily: "'Caveat', cursive", background: 'transparent',
+                outline: 'none', color: '#000', cursor: 'pointer', appearance: 'none'
+              }}
+            >
+              <option value="">Third (Optional)</option>
+              {INDUSTRIES.map(ind => <option key={ind} value={ind} disabled={ind === industryPrimary || ind === industrySecondary}>{ind}</option>)}
+            </select>
+          </div>
+        </div>
 
         <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 200px' }}>

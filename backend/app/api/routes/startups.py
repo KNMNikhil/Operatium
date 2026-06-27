@@ -14,28 +14,10 @@ async def create_startup(request: Request, payload: StartupCreate):
     supabase = get_supabase()
     logger.info("create_startup_attempt", name=payload.name)
     try:
-        from app.agents.executives.ceo import CEO
-        from langchain_core.messages import HumanMessage
-        
-        ceo = CEO()
-        prompt = f"""Analyze the following startup description and categorize its industry.
-Startup Name: {payload.name}
-Description: {payload.description}
-
-Provide the Primary Industry and Secondary Industry. The Tertiary Industry is optional.
-Return your answer ONLY as a raw comma-separated string, for example: "Fintech, AI, B2B" or "EdTech, SaaS". Do NOT output any other text or markdown formatting."""
-        
-        try:
-            resp = await ceo.llm.ainvoke([HumanMessage(content=prompt)])
-            generated_industry = resp.content.strip()
-        except Exception as e:
-            logger.error("industry_generation_failed", error=str(e))
-            generated_industry = "Technology"
-
         result = supabase.table("startups").insert({
             "name": payload.name,
             "description": payload.description,
-            "industry": generated_industry,
+            "industry": payload.industry,
             "executives": payload.executives,
         }).execute()
         await invalidate_cache("startups:page:*")
@@ -43,6 +25,40 @@ Return your answer ONLY as a raw comma-separated string, for example: "Fintech, 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+class ClassifyRequest(BaseModel):
+    description: str
+
+@router.post("/classify", response_model=dict)
+@limiter.limit("20/minute")
+async def classify_startup(request: Request, payload: ClassifyRequest):
+    logger.info("classify_startup_attempt")
+    try:
+        from app.agents.executives.ceo import CEO
+        from langchain_core.messages import HumanMessage
+        
+        ceo = CEO()
+        prompt = f"""Analyze the following startup description and categorize its industry.
+Description: {payload.description}
+
+Provide the Primary Industry, Secondary Industry, and an optional Tertiary Industry from this exact list:
+SaaS, Marketplace, Consumer App, FinTech, HealthTech, EdTech, AI / ML, E-commerce, Social Network, Developer Tools, Climate Tech, Enterprise Software, Gaming, Media & Entertainment, BioTech, Hardware, Robotics, SpaceTech, Web3 / Crypto, Cybersecurity, Logistics, PropTech, Other.
+
+Return your answer ONLY as a JSON object with keys "primary", "secondary", and "tertiary" (can be empty string if not applicable). Do not output any markdown formatting like ```json."""
+        
+        resp = await ceo.llm.ainvoke([HumanMessage(content=prompt)])
+        content = resp.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.endswith("```"):
+            content = content[:-3]
+        
+        import json
+        data = json.loads(content)
+        return data
+    except Exception as e:
+        logger.error("industry_classification_failed", error=str(e))
+        return {"primary": "Other", "secondary": "", "tertiary": ""}
 
 @router.get("", response_model=list)
 @limiter.limit("60/minute")

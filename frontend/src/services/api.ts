@@ -82,6 +82,9 @@ export const api = {
   createStartup: (payload: { name: string; description: string; industry: string; executives: string[] }) =>
     apiFetch<Startup>('/api/startups', { method: 'POST', body: JSON.stringify(payload) }),
 
+  classifyStartup: (description: string) =>
+    apiFetch<{ primary: string, secondary: string, tertiary: string }>('/api/startups/classify', { method: 'POST', body: JSON.stringify({ description }) }),
+
   listStartups: () =>
     apiFetch<Startup[]>('/api/startups'),
 
